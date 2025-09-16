@@ -298,8 +298,15 @@ def main():
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print('Using device:', device)
+    if torch.backends.mps.is_available():
+        device = torch.device('mps')
+        print('Using device: mps (Apple Silicon GPU)')
+    elif torch.cuda.is_available():
+        device = torch.device('cuda')
+        print('Using device: cuda (NVIDIA GPU)')
+    else:
+        device = torch.device('cpu')
+        print('Using device: cpu')
 
     transform = transforms.Compose([
         transforms.ToTensor(),
