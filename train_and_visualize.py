@@ -19,7 +19,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
-showTopEdges = 5
+showTopEdges = 20
 
 
 class SimpleMLP(nn.Module):
@@ -171,28 +171,35 @@ def visualize_input_graph(model, input_img, input_activations, out_path, top_k_e
     colors = []
     linewidths = []
 
-    # draw strongest edges into hidden neurons from input
-    absW1 = np.abs(W1)
-    for h in range(n_hidden):
-        # select top-k contributing input pixels by absolute weight magnitude
-        top_idx = np.argsort(absW1[h])[::-1][:top_k_edges]
-        for i in top_idx:
-            seg = [pos_in[i], pos_h[h]]
-            segments.append(seg)
-            weight = W1[h, i]
-            colors.append('k')
-            linewidths.append(0.5 + 3.0 * (abs(weight) / (absW1[h, top_idx][0] + 1e-12)))
+    # draw strongest edges into hidden neurons from input (global top-k across all input->hidden weights)
+    absW1 = np.abs(W1)  # shape (hidden, input)
+    flat1 = absW1.flatten()
+    k1 = int(top_k_edges)
+    k1 = min(k1, flat1.size)
+    top_flat_idx1 = np.argsort(flat1)[::-1][:k1]
+    # convert flat indices to (h, i)
+    h_idx1, i_idx1 = np.unravel_index(top_flat_idx1, absW1.shape)
+    for h, i in zip(h_idx1, i_idx1):
+        seg = [pos_in[i], pos_h[h]]
+        segments.append(seg)
+        weight = W1[h, i]
+        colors.append('k')
+        # normalize linewidth by the max of selected weights to keep scale stable
+        linewidths.append(0.5 + 3.0 * (abs(weight) / (flat1[top_flat_idx1][0] + 1e-12)))
 
-    # draw strongest edges from hidden to outputs
-    absW2 = np.abs(W2)
-    for o in range(n_out):
-        top_idx = np.argsort(absW2[o])[::-1][:top_k_edges]
-        for h in top_idx:
-            seg = [pos_h[h], pos_out[o]]
-            segments.append(seg)
-            weight = W2[o, h]
-            colors.append('k')
-            linewidths.append(0.5 + 3.0 * (abs(weight) / (absW2[o, top_idx][0] + 1e-12)))
+    # draw strongest edges from hidden to outputs (global top-k across hidden->output weights)
+    absW2 = np.abs(W2)  # shape (out, hidden)
+    flat2 = absW2.flatten()
+    k2 = int(top_k_edges)
+    k2 = min(k2, flat2.size)
+    top_flat_idx2 = np.argsort(flat2)[::-1][:k2]
+    o_idx2, h_idx2 = np.unravel_index(top_flat_idx2, absW2.shape)
+    for o, h in zip(o_idx2, h_idx2):
+        seg = [pos_h[h], pos_out[o]]
+        segments.append(seg)
+        weight = W2[o, h]
+        colors.append('k')
+        linewidths.append(0.5 + 3.0 * (abs(weight) / (flat2[top_flat_idx2][0] + 1e-12)))
 
     lc = LineCollection(segments, colors=colors, linewidths=linewidths, alpha=0.7)
     ax.add_collection(lc)
@@ -321,106 +328,3 @@ def main():
 if __name__ == '__main__':
     main()
 
-
-def visualize_input_graph(model, input_img, input_activations, out_path, top_k_edges=16):
-    """
-    Draw a simple layered graph: input pixels (flattened) -> hidden neurons -> output neurons.
-    - input_img: (1,28,28) numpy array
-    - input_activations: activations for hidden layer for that input (N_neurons,)
-    - top_k_edges: number of strongest incoming edges to draw per target neuron
-    """
-    import matplotlib.pyplot as plt
-    from matplotlib.collections import LineCollection
-    import numpy as np
-
-    # extract weights from model
-    # assume model has attributes fc1 and fc2
-    W1 = model.fc1.weight.detach().cpu().numpy()  # shape (hidden, input)
-    b1 = model.fc1.bias.detach().cpu().numpy()
-    W2 = model.fc2.weight.detach().cpu().numpy()  # shape (out, hidden)
-    b2 = model.fc2.bias.detach().cpu().numpy()
-
-    input_flat = input_img.reshape(-1)
-    n_input = input_flat.shape[0]
-    n_hidden = W1.shape[0]
-    n_out = W2.shape[0]
-
-    # layout positions: x coordinates for each layer
-    layer_x = [0.0, 1.0, 2.0]
-    # spread nodes vertically
-    def layer_positions(n, x):
-        ys = np.linspace(-1, 1, n)
-        xs = np.full(n, x)
-        return np.column_stack([xs, ys])
-
-    pos_in = layer_positions(n_input, layer_x[0])
-    pos_h = layer_positions(n_hidden, layer_x[1])
-    pos_out = layer_positions(n_out, layer_x[2])
-
-    fig, ax = plt.subplots(figsize=(12, 8))
-
-    segments = []
-    colors = []
-    linewidths = []
-
-    # draw strongest edges into hidden neurons from input
-    absW1 = np.abs(W1)
-    for h in range(n_hidden):
-        # select top-k contributing input pixels by absolute weight magnitude
-        top_idx = np.argsort(absW1[h])[::-1][:top_k_edges]
-        for i in top_idx:
-            seg = [pos_in[i], pos_h[h]]
-            segments.append(seg)
-            weight = W1[h, i]
-            colors.append('k')
-            linewidths.append(0.5 + 3.0 * (abs(weight) / (absW1[h, top_idx][0] + 1e-12)))
-
-    # draw strongest edges from hidden to outputs
-    absW2 = np.abs(W2)
-    for o in range(n_out):
-        top_idx = np.argsort(absW2[o])[::-1][:top_k_edges]
-        for h in top_idx:
-            seg = [pos_h[h], pos_out[o]]
-            segments.append(seg)
-            weight = W2[o, h]
-            colors.append('k')
-            linewidths.append(0.5 + 3.0 * (abs(weight) / (absW2[o, top_idx][0] + 1e-12)))
-
-    lc = LineCollection(segments, colors=colors, linewidths=linewidths, alpha=0.7)
-    ax.add_collection(lc)
-
-    # draw nodes: size/color by activation
-    # input nodes colored by pixel intensity (normalized)
-    pix = input_flat
-    pix_norm = (pix - pix.min()) / (pix.max() - pix.min() + 1e-12)
-    ax.scatter(pos_in[:, 0], pos_in[:, 1], s=10, c=pix_norm, cmap='gray', edgecolors='none')
-
-    # hidden nodes colored by activation (ReLU)
-    h_act = np.maximum(0, input_activations)
-    h_norm = (h_act - h_act.min()) / (h_act.max() - h_act.min() + 1e-12)
-    ax.scatter(pos_h[:, 0], pos_h[:, 1], s=50, c=h_norm, cmap='viridis', edgecolors='k')
-
-    # output nodes: show softmax scores magnitude (use weights*activations)
-    # compute pseudo-output activations
-    out_act = W2.dot(h_act) + b2
-    out_norm = (out_act - out_act.min()) / (out_act.max() - out_act.min() + 1e-12)
-    ax.scatter(pos_out[:, 0], pos_out[:, 1], s=80, c=out_norm, cmap='plasma', edgecolors='k')
-
-    # labels
-    for i in range(n_input):
-        if n_input <= 100:
-            ax.text(pos_in[i, 0] - 0.05, pos_in[i, 1], str(i), fontsize=6)
-            # avoid labeling many input pixels
-            pass
-    for h in range(n_hidden):
-        ax.text(pos_h[h, 0], pos_h[h, 1], str(h), fontsize=6, va='center')
-    for o in range(n_out):
-        ax.text(pos_out[o, 0] + 0.02, pos_out[o, 1], str(o), fontsize=8, va='center')
-
-    ax.set_xlim(-0.5, 2.5)
-    ax.set_ylim(-1.1, 1.1)
-    ax.axis('off')
-    plt.title('Network activations and strongest weights (darker/thicker = larger magnitude)')
-    plt.tight_layout()
-    fig.savefig(out_path)
-    plt.close(fig)
