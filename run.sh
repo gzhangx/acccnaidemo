@@ -1,0 +1,1 @@
+/mnt/d/work/temp/aianime/.venv/bin/python /mnt/d/work/temp/aianime/train_and_visualize.py --epochs 10 --quick --batch-size 256 --hidden-size 64 --output-dir /mnt/d/work/temp/aianime/outputs --save-path /mnt/d/work/temp/aianime/outputs/model.pth
