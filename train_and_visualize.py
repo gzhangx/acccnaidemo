@@ -20,7 +20,7 @@ from torch.utils.data import DataLoader
 from torchvision import datasets
 
 
-from common_utils import SimpleMLP
+from common_utils import get_model, get_device, get_norm_transform, default_checkpoint_path
 
 
 def train(model, device, train_loader, optimizer, epoch):
@@ -51,26 +51,6 @@ def evaluate(model, device, test_loader):
     return correct / total
 
 
-def collect_activations(model, device, data_loader, max_batches=1):
-    model.eval()
-    activations = []
-    inputs = []
-    labels = []
-    with torch.no_grad():
-        for i, (data, target) in enumerate(data_loader):
-            data = data.to(device)
-            output, h = model(data)
-            activations.append(h.cpu().numpy())
-            inputs.append(data.cpu().numpy())
-            labels.append(target.numpy())
-            if i + 1 >= max_batches:
-                break
-    activations = np.concatenate(activations, axis=0)
-    inputs = np.concatenate(inputs, axis=0)
-    labels = np.concatenate(labels, axis=0)
-    return activations, inputs, labels
-
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--epochs', type=int, default=3)
@@ -79,13 +59,12 @@ def main():
     parser.add_argument('--output-dir', type=str, default='outputs')
     parser.add_argument('--quick', action='store_true', help='run quick mode (less data)')
     parser.add_argument('--input-graph', type=int, default=None, help='index of collected input to draw network graph for')
-    parser.add_argument('--checkpoint', type=str, default='outputs/model.pth', help='path to save/load model checkpoint')
+    parser.add_argument('--checkpoint', type=str, default=default_checkpoint_path, help='path to save/load model checkpoint')
     args = parser.parse_args()
 
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    from common_utils import get_device, get_norm_transform
     device = get_device()
     transform = get_norm_transform()
 
@@ -100,19 +79,8 @@ def main():
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
 
-    model = SimpleMLP(hidden_size=args.hidden_size).to(device)
+    model = get_model()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-
-    # Load checkpoint if exists
-    if os.path.exists(args.checkpoint):
-        ckpt = torch.load(args.checkpoint, map_location=device)
-        model.load_state_dict(ckpt.get('model_state', ckpt))
-        if 'optimizer_state' in ckpt:
-            try:
-                optimizer.load_state_dict(ckpt['optimizer_state'])
-            except Exception:
-                print('Loaded model weights; optimizer state not restored')
-        print('Loaded checkpoint from', args.checkpoint)
 
     for epoch in range(1, args.epochs + 1):
         train(model, device, train_loader, optimizer, epoch)

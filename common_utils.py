@@ -4,6 +4,8 @@ import os
 import torch
 from torchvision import transforms
 
+default_checkpoint_path='outputs/model.pth'
+
 class SimpleMLP(nn.Module):
     def __init__(self, input_size=28*28, hidden_size=128, num_classes=10):
         super().__init__()
@@ -29,10 +31,9 @@ def get_device():
         print('Using device: cpu')
         return torch.device('cpu')
 
-def get_model(hidden_size=64, device=None, checkpoint_path='outputs/model.pth'):
+def get_model(hidden_size=64, checkpoint_path=default_checkpoint_path):
     model = SimpleMLP(hidden_size=hidden_size)
-    if device is None:
-        device = get_device()
+    device = get_device()
     if os.path.exists(checkpoint_path):
         ckpt = torch.load(checkpoint_path, map_location=device)
         model.load_state_dict(ckpt.get('model_state', ckpt))
