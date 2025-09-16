@@ -165,7 +165,10 @@ def visualize_input_graph(model, input_img, input_activations, out_path, top_k_e
     pos_h = layer_positions(n_hidden, layer_x[1])
     pos_out = layer_positions(n_out, layer_x[2])
 
-    fig, ax = plt.subplots(figsize=(12, 8))
+    # create a figure with two panels: left for original image, right for network graph
+    fig = plt.figure(figsize=(14, 8))
+    ax_img = fig.add_axes([0.02, 0.05, 0.28, 0.9])  # left panel for image
+    ax = fig.add_axes([0.36, 0.05, 0.62, 0.9])      # right panel for graph
 
     segments = []
     colors = []
@@ -179,13 +182,18 @@ def visualize_input_graph(model, input_img, input_activations, out_path, top_k_e
     top_flat_idx1 = np.argsort(flat1)[::-1][:k1]
     # convert flat indices to (h, i)
     h_idx1, i_idx1 = np.unravel_index(top_flat_idx1, absW1.shape)
-    for h, i in zip(h_idx1, i_idx1):
+    selected_vals1 = flat1[top_flat_idx1]
+    vmin1 = selected_vals1.min() if selected_vals1.size > 0 else 0.0
+    vmax1 = selected_vals1.max() if selected_vals1.size > 0 else 1.0
+    # map to linewidths and alpha in a stable range
+    for h, i, val in zip(h_idx1, i_idx1, selected_vals1):
         seg = [pos_in[i], pos_h[h]]
         segments.append(seg)
         weight = W1[h, i]
         colors.append('k')
-        # normalize linewidth by the max of selected weights to keep scale stable
-        linewidths.append(0.5 + 3.0 * (abs(weight) / (flat1[top_flat_idx1][0] + 1e-12)))
+        norm = (val - vmin1) / (vmax1 - vmin1 + 1e-12)
+        linewidths.append(0.8 + 4.0 * norm)
+
 
     # draw strongest edges from hidden to outputs (global top-k across hidden->output weights)
     absW2 = np.abs(W2)  # shape (out, hidden)
@@ -194,15 +202,28 @@ def visualize_input_graph(model, input_img, input_activations, out_path, top_k_e
     k2 = min(k2, flat2.size)
     top_flat_idx2 = np.argsort(flat2)[::-1][:k2]
     o_idx2, h_idx2 = np.unravel_index(top_flat_idx2, absW2.shape)
-    for o, h in zip(o_idx2, h_idx2):
+    selected_vals2 = flat2[top_flat_idx2]
+    vmin2 = selected_vals2.min() if selected_vals2.size > 0 else 0.0
+    vmax2 = selected_vals2.max() if selected_vals2.size > 0 else 1.0
+    for o, h, val in zip(o_idx2, h_idx2, selected_vals2):
         seg = [pos_h[h], pos_out[o]]
         segments.append(seg)
         weight = W2[o, h]
         colors.append('k')
-        linewidths.append(0.5 + 3.0 * (abs(weight) / (flat2[top_flat_idx2][0] + 1e-12)))
+        norm = (val - vmin2) / (vmax2 - vmin2 + 1e-12)
+        linewidths.append(0.8 + 4.0 * norm)
 
     lc = LineCollection(segments, colors=colors, linewidths=linewidths, alpha=0.7)
     ax.add_collection(lc)
+
+    # left: show the original MNIST image (unnormalized) for reference
+    try:
+        img_28 = input_img.reshape(28, 28)
+    except Exception:
+        img_28 = input_flat.reshape(28, 28)
+    ax_img.imshow(img_28, cmap='gray')
+    ax_img.set_title('Original input')
+    ax_img.axis('off')
 
     # draw nodes: size/color by activation
     # input nodes colored by pixel intensity (normalized)
