@@ -77,9 +77,10 @@ def visualize_sample(model, device, img_raw, img_norm, label, out_path, top_k_hi
     pos_in = layer_pos(n_input, xs[0])
     pos_h = layer_pos(n_hidden, xs[1])
     pos_out_positions = layer_pos(n_out, xs[2])
-    # Order the output nodes by label (ascending) and map label -> position
-    label_order = sorted(list(range(n_out)))
-    pos_out_map = {label: tuple(pos) for label, pos in zip(label_order, pos_out_positions)}
+    # layer_pos places nodes top->bottom as increasing y from -1 to 1; to have label 0 at top,
+    # reverse the positions so index 0 maps to the top position
+    pos_out_positions_flipped = pos_out_positions[::-1]
+    pos_out_map = {label: tuple(pos) for label, pos in zip(range(n_out), pos_out_positions_flipped)}
 
     segments = []
     colors = []
