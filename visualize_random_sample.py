@@ -135,12 +135,17 @@ def visualize_sample(model, device, img_raw, img_norm, label, out_path, top_k_hi
     # outputs: color by prob, highlight prediction
     out_probs = probs
     out_norm = (out_probs - out_probs.min()) / (out_probs.max() - out_probs.min() + 1e-12)
-    sizes = np.full(n_out, 80)
-    edgecols = ['k'] * n_out
-    sizes[pred] = 220
-    edgecols[pred] = 'red'
     # construct ordered array of output positions matching label order 0..n_out-1
     pos_out_arr = np.vstack([pos_out_map[i] for i in range(n_out)])
+    # scale sizes by probability (small base + scaled)
+    base_size = 2
+    max_scale = 220
+    sizes = base_size + (out_probs * (max_scale - base_size))
+    print('Output node sizes:', sizes, out_probs)
+    edgecols = ['k'] * n_out
+    # emphasize predicted class
+    sizes[pred] = sizes[pred] * 1.6
+    edgecols[pred] = 'red'
     ax_center.scatter(pos_out_arr[:,0], pos_out_arr[:,1], s=sizes, c=out_norm, cmap='plasma', edgecolors=edgecols)
 
     ax_center.set_xlim(-0.5, 2.5)
@@ -177,7 +182,7 @@ def visualize_sample(model, device, img_raw, img_norm, label, out_path, top_k_hi
     ax_out.tick_params(axis='y', labelsize=6)
     ax_out.set_title(f'Probs (pred={pred})', fontsize=8)
 
-    plt.suptitle('Random MNIST sample visualization')
+    plt.suptitle('ACCCN Sunday school prob demo')
     # use manual subplots_adjust rather than tight_layout to avoid compatibility warnings
     fig.subplots_adjust(left=0.05, right=0.98, top=0.92)
     os.makedirs(Path(out_path).parent, exist_ok=True)
