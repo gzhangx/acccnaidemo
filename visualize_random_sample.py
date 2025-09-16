@@ -47,19 +47,22 @@ def visualize_sample(model, device, img_raw, img_norm, label, out_path, top_k_hi
     topk_idx = np.argsort(h)[::-1][:top_k_hidden]
     topk_vals = h[topk_idx]
 
-    # prepare figure: 3 columns: left image, center grid of neuron weight maps, right bar chart
+    # prepare figure: 3 columns: left image (small), center wide, right (small)
     cols = 1 + max(1, int(math.ceil(math.sqrt(top_k_hidden)))) + 1
     fig = plt.figure(figsize=(14, 6))
+    # make the left and right panels much smaller than the center
+    # increase horizontal spacing to avoid axes overlapping
+    gs = fig.add_gridspec(1, 3, width_ratios=[0.6, 4.8, 0.6], wspace=0.35)
 
-    # left: original image
-    ax_img = fig.add_subplot(1, 3, 1)
+    # left: original image (small panel)
+    ax_img = fig.add_subplot(gs[0, 0])
     img_show = img_raw.squeeze()
     ax_img.imshow(img_show, cmap='gray')
-    ax_img.set_title(f'Original (label: {label})')
+    ax_img.set_title(f'Original\n(label: {label})', fontsize=9)
     ax_img.axis('off')
 
     # center: connection graph showing top-K edges per stage (input->hidden, hidden->output)
-    ax_center = fig.add_subplot(1, 3, 2)
+    ax_center = fig.add_subplot(gs[0, 1])
     ax_center.axis('off')
 
     # prepare weights and shapes
@@ -119,6 +122,8 @@ def visualize_sample(model, device, img_raw, img_norm, label, out_path, top_k_hi
     # add edges
     from matplotlib.collections import LineCollection
     lc = LineCollection(segments, colors=colors, linewidths=linewidths, alpha=0.8)
+    # ensure edges are clipped to the center axes (avoid drawing over other axes)
+    lc.set_clip_on(True)
     ax_center.add_collection(lc)
 
     # draw nodes: inputs (small, show as grayscale), hidden (by activation), outputs (by probs)
@@ -142,18 +147,19 @@ def visualize_sample(model, device, img_raw, img_norm, label, out_path, top_k_hi
     ax_center.set_ylim(-1.1, 1.1)
     ax_center.set_title(f'Top connections (K={top_k_hidden} per stage)')
 
-    # right: output probabilities bar chart
-    ax_out = fig.add_subplot(1, 3, 3)
+    # right: output probabilities bar chart (small panel)
+    ax_out = fig.add_subplot(gs[0, 2])
     classes = list(range(probs.shape[0]))
     bars = ax_out.bar(classes, probs, color='gray')
     bars[pred].set_color('red')
     ax_out.set_xticks(classes)
     ax_out.set_xlabel('Class')
     ax_out.set_ylabel('Probability')
-    ax_out.set_title(f'Output probabilities (pred={pred})')
+    ax_out.set_title(f'Probs\n(pred={pred})', fontsize=9)
 
     plt.suptitle('Random MNIST sample visualization')
-    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    # use manual subplots_adjust rather than tight_layout to avoid compatibility warnings
+    fig.subplots_adjust(left=0.05, right=0.98, top=0.92)
     os.makedirs(Path(out_path).parent, exist_ok=True)
     fig.savefig(out_path)
     plt.close(fig)
