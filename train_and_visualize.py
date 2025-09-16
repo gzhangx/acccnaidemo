@@ -167,8 +167,8 @@ def visualize_input_graph(model, input_img, input_activations, out_path, top_k_e
 
     # create a figure with two panels: left for original image, right for network graph
     fig = plt.figure(figsize=(14, 8))
-    ax_img = fig.add_axes([0.02, 0.05, 0.18, 0.9])  # left panel for image (made smaller)
-    ax = fig.add_axes([0.22, 0.05, 0.76, 0.9])      # right panel for graph (expanded)
+    ax_img = fig.add_axes([0.02, 0.05, 0.12, 0.9])  # left panel for image (even smaller)
+    ax = fig.add_axes([0.16, 0.05, 0.82, 0.9])      # right panel for graph (expanded)
 
     segments = []
     colors = []
@@ -224,6 +224,18 @@ def visualize_input_graph(model, input_img, input_activations, out_path, top_k_e
     ax_img.imshow(img_28, cmap='gray')
     ax_img.set_title('Original input')
     ax_img.axis('off')
+    # compute model prediction to mark on the image
+    with torch.no_grad():
+        inp_t = torch.from_numpy(input_img.reshape(1, 1, 28, 28)).float()
+        if next(model.parameters()).is_cuda:
+            inp_t = inp_t.cuda()
+        out, _ = model(inp_t)
+        probs = F.softmax(out, dim=1).cpu().numpy()[0]
+        pred = int(np.argmax(probs))
+    # draw a red border and predicted label
+    rect = plt.Rectangle((0, 0), 28, 28, linewidth=2, edgecolor='red', facecolor='none', transform=ax_img.transData)
+    ax_img.add_patch(rect)
+    ax_img.text(0, -2, f'Pred: {pred}', color='red', fontsize=10, va='bottom')
 
     # draw nodes: size/color by activation
     # input nodes colored by pixel intensity (normalized)
@@ -236,11 +248,20 @@ def visualize_input_graph(model, input_img, input_activations, out_path, top_k_e
     h_norm = (h_act - h_act.min()) / (h_act.max() - h_act.min() + 1e-12)
     ax.scatter(pos_h[:, 0], pos_h[:, 1], s=50, c=h_norm, cmap='viridis', edgecolors='k')
 
-    # output nodes: show softmax scores magnitude (use weights*activations)
-    # compute pseudo-output activations
+    # output nodes: show softmax scores magnitude (use model output)
+    # compute output activations properly using model weights
     out_act = W2.dot(h_act) + b2
     out_norm = (out_act - out_act.min()) / (out_act.max() - out_act.min() + 1e-12)
-    ax.scatter(pos_out[:, 0], pos_out[:, 1], s=80, c=out_norm, cmap='plasma', edgecolors='k')
+    base_sizes = np.full(n_out, 80)
+    base_edgecolors = ['k'] * n_out
+    # emphasize predicted output node
+    try:
+        pred_idx = pred
+        base_sizes[pred_idx] = 200
+        base_edgecolors[pred_idx] = 'red'
+    except Exception:
+        pred_idx = None
+    ax.scatter(pos_out[:, 0], pos_out[:, 1], s=base_sizes, c=out_norm, cmap='plasma', edgecolors=base_edgecolors)
 
     # labels
     for i in range(n_input):
