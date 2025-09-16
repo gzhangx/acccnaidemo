@@ -99,25 +99,20 @@ def visualize_sample(model, device, img_raw, img_norm, label, out_path, top_k_hi
     for h_i, i_i, val in zip(h_idx1, i_idx1, vals1):
         segments.append([pos_in[i_i], pos_h[h_i]])
         colors.append('k')
-        norm = (val - vmin1) / (vmax1 - vmin1 + 1e-12)
-        linewidths.append(0.8 + 4.0 * norm)
+        linewidths.append(1)
 
-    # select global top-K hidden->output edges using per-sample contribution = |w * hidden_activation|
-    # h contains the hidden activations for this sample
-    contrib2 = np.abs(W2 * h[np.newaxis, :])
-    flat2 = contrib2.flatten()
-    k2 = min(top_k_hidden, flat2.size)
-    top_idx2 = np.argsort(flat2)[::-1][:k2]
-    vals2 = flat2[top_idx2]
-    vmin2 = vals2.min() if vals2.size > 0 else 0.0
-    vmax2 = vals2.max() if vals2.size > 0 else 1.0
-    o_idx2, h_idx2 = np.unravel_index(top_idx2, contrib2.shape)
-    for o_i, h_i, val in zip(o_idx2, h_idx2, vals2):
-        # map output index (class label) to its ordered position
-        segments.append([pos_h[h_i], pos_out_map[o_i]])
-        colors.append('k')
-        norm = (val - vmin2) / (vmax2 - vmin2 + 1e-12)
-        linewidths.append(0.8 + 4.0 * norm)
+    # For hidden->output edges: top 5 activated hidden neurons get 5,4,3,2,1 strongest links each
+    contrib2 = np.abs(W2 * h[np.newaxis, :])  # shape (out, hidden)
+    top_hidden_n = 5
+    top_hidden_idx = np.argsort(h)[::-1][:top_hidden_n]
+    for rank, h_i in enumerate(top_hidden_idx):
+        num_links = top_hidden_n - rank  # 5,4,3,2,1
+        edge_strengths = contrib2[:, h_i]
+        out_idx = np.argsort(edge_strengths)[::-1][:num_links]
+        for o_i in out_idx:
+            segments.append([pos_h[h_i], pos_out_map[o_i]])
+            colors.append('k')
+            linewidths.append(1)
 
     # add edges
     from matplotlib.collections import LineCollection
