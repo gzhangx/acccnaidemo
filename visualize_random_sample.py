@@ -50,16 +50,9 @@ def visualize_sample(model, device, img_raw, img_norm, label, out_path, top_k_hi
     # prepare figure: 3 columns: left image (small), center wide, right (small)
     cols = 1 + max(1, int(math.ceil(math.sqrt(top_k_hidden)))) + 1
     fig = plt.figure(figsize=(14, 6))
-    # make the left and right panels much smaller than the center
+    # make the side panels small and center wide; right column will be split vertically
     # increase horizontal spacing to avoid axes overlapping
-    gs = fig.add_gridspec(1, 3, width_ratios=[0.6, 4.8, 0.6], wspace=0.35)
-
-    # left: original image (small panel)
-    ax_img = fig.add_subplot(gs[0, 0])
-    img_show = img_raw.squeeze()
-    ax_img.imshow(img_show, cmap='gray')
-    ax_img.set_title(f'Original\n(label: {label})', fontsize=9)
-    ax_img.axis('off')
+    gs = fig.add_gridspec(1, 3, width_ratios=[0.1, 5.0, 0.9], wspace=0.35)
 
     # center: connection graph showing top-K edges per stage (input->hidden, hidden->output)
     ax_center = fig.add_subplot(gs[0, 1])
@@ -147,8 +140,15 @@ def visualize_sample(model, device, img_raw, img_norm, label, out_path, top_k_hi
     ax_center.set_ylim(-1.1, 1.1)
     ax_center.set_title(f'Top connections (K={top_k_hidden} per stage)')
 
-    # right: output probabilities bar chart (small panel)
-    ax_out = fig.add_subplot(gs[0, 2])
+    # right: split into two rows: top small original image, bottom probabilities
+    gs_right = gs[0, 2].subgridspec(2, 1, height_ratios=[0.5, 1.5], hspace=0.08)
+    ax_img = fig.add_subplot(gs_right[0, 0])
+    ax_out = fig.add_subplot(gs_right[1, 0])
+    # show original image above probs
+    img_show = img_raw.squeeze()
+    ax_img.imshow(img_show, cmap='gray')
+    ax_img.set_title(f'Original\n(label: {label})', fontsize=9)
+    ax_img.axis('off')
     classes = list(range(probs.shape[0]))
     bars = ax_out.bar(classes, probs, color='gray')
     bars[pred].set_color('red')
