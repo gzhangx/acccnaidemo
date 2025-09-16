@@ -193,15 +193,22 @@ def visualize_sample(model, device, img_raw, img_norm, label, out_path, top_k_hi
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--checkpoint', type=str, default='outputs/model.pth')
+    parser.add_argument('--checkpoint', type=str, default='outputs/model.pth', help='path to model checkpoint')
     parser.add_argument('--top-hidden', type=int, default=9)
     parser.add_argument('--seed', type=int, default=None)
     parser.add_argument('--index', type=int, default=None, help='optionally specify a test index instead of random')
     parser.add_argument('--output', type=str, default='outputs/random_sample.png')
     args = parser.parse_args()
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print('Using device:', device)
+    if torch.backends.mps.is_available():
+        device = torch.device('mps')
+        print('Using device: mps (Apple Silicon GPU)')
+    elif torch.cuda.is_available():
+        device = torch.device('cuda')
+        print('Using device: cuda (NVIDIA GPU)')
+    else:
+        device = torch.device('cpu')
+        print('Using device: cpu')
 
     # load datasets
     raw_transform = transforms.ToTensor()
@@ -222,8 +229,12 @@ def main():
 
     # load model
     model = SimpleMLP(hidden_size=64)
-    ckpt = torch.load(args.checkpoint, map_location=device)
-    model.load_state_dict(ckpt.get('model_state', ckpt))
+    if os.path.exists(args.checkpoint):
+        ckpt = torch.load(args.checkpoint, map_location=device)
+        model.load_state_dict(ckpt.get('model_state', ckpt))
+        print('Loaded checkpoint from', args.checkpoint)
+    else:
+        print(f'Checkpoint {args.checkpoint} not found. Using untrained model.')
     model.to(device)
 
     visualize_sample(model, device, img_raw.numpy(), img_norm, label, args.output, top_k_hidden=args.top_hidden)

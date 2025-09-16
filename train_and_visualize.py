@@ -291,8 +291,7 @@ def main():
     parser.add_argument('--output-dir', type=str, default='outputs')
     parser.add_argument('--quick', action='store_true', help='run quick mode (less data)')
     parser.add_argument('--input-graph', type=int, default=None, help='index of collected input to draw network graph for')
-    parser.add_argument('--save-path', type=str, default=None, help='path to save model checkpoint (after training)')
-    parser.add_argument('--load-path', type=str, default=None, help='path to load model checkpoint before evaluation/visualization')
+    parser.add_argument('--checkpoint', type=str, default='outputs/model.pth', help='path to save/load model checkpoint')
     args = parser.parse_args()
 
     out_dir = Path(args.output_dir)
@@ -327,51 +326,26 @@ def main():
     model = SimpleMLP(hidden_size=args.hidden_size).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
-    # Optionally load a checkpoint
-    if args.save_path is not None:
-        ckpt = torch.load(args.save_path, map_location=device)
+    # Load checkpoint if exists
+    if os.path.exists(args.checkpoint):
+        ckpt = torch.load(args.checkpoint, map_location=device)
         model.load_state_dict(ckpt.get('model_state', ckpt))
         if 'optimizer_state' in ckpt:
             try:
                 optimizer.load_state_dict(ckpt['optimizer_state'])
             except Exception:
-                # optimizer state may be incompatible across PyTorch versions
                 print('Loaded model weights; optimizer state not restored')
-        print('Loaded checkpoint from', args.save_path)
+        print('Loaded checkpoint from', args.checkpoint)
 
     for epoch in range(1, args.epochs + 1):
         train(model, device, train_loader, optimizer, epoch)
         acc = evaluate(model, device, test_loader)
         print(f'Epoch {epoch} accuracy: {acc * 100:.2f}%')
 
-    # Optionally save a checkpoint
-    if args.save_path is not None:
-        ckpt = {'model_state': model.state_dict(), 'optimizer_state': optimizer.state_dict(), 'args': vars(args)}
-        torch.save(ckpt, args.save_path)
-        print('Saved checkpoint to', args.save_path)
-
-    # collect activations for a few batches
-    activations, inputs, labels = collect_activations(model, device, test_loader, max_batches=4)
-    # activations: (N_inputs, N_neurons)
-
-    heatmap_path = out_dir / 'activations.png'
-    plot_activation_heatmap(activations, heatmap_path, max_neurons=min(256, activations.shape[1]), max_inputs=activations.shape[0])
-
-    examples_dir = out_dir / 'activation_examples'
-    save_per_neuron_examples(activations, inputs, labels, examples_dir, top_k=9)
-
-    # optional: visualize connections for a single input
-    if args.input_graph is not None:
-        # args.input_graph is an index into the collected inputs (0..N-1)
-        idx = int(args.input_graph)
-        if idx < 0 or idx >= inputs.shape[0]:
-            print(f"input_graph index {idx} out of range (0..{inputs.shape[0]-1})")
-        else:
-            graph_path = out_dir / f'input_{idx}_graph.png'
-            visualize_input_graph(model, inputs[idx], activations[idx], graph_path, top_k_edges=showTopEdges)
-            print('Saved input graph to', graph_path)
-
-    print('Saved visualizations to', out_dir)
+    # Save checkpoint
+    ckpt = {'model_state': model.state_dict(), 'optimizer_state': optimizer.state_dict(), 'args': vars(args)}
+    torch.save(ckpt, args.checkpoint)
+    print('Saved checkpoint to', args.checkpoint)
 
 
 if __name__ == '__main__':
