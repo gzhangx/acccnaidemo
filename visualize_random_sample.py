@@ -41,7 +41,6 @@ def display_line_connections(fig, gs, model, img_raw, h, probs, top_k_hidden):
     ax_center.axis('off')
     W1 = model.fc1.weight.detach().cpu().numpy()
     W2 = model.fc2.weight.detach().cpu().numpy()
-    b2 = model.fc2.bias.detach().cpu().numpy()
     input_flat = img_raw.reshape(-1)
     n_input = input_flat.size
     n_hidden = W1.shape[0]
@@ -49,41 +48,49 @@ def display_line_connections(fig, gs, model, img_raw, h, probs, top_k_hidden):
     xs = [0.0, 1.0, 2.0]
     def layer_pos(n, x):
         ys = np.linspace(-1, 1, n)
-        xs = np.full(n, x)
-        return np.column_stack([xs, ys])
+        xs_arr = np.full(n, x)
+        return np.column_stack([xs_arr, ys])
     pos_in = layer_pos(n_input, xs[0])
     pos_h = layer_pos(n_hidden, xs[1])
-    pos_out_positions = layer_pos(n_out, xs[2])
-    pos_out_positions_flipped = pos_out_positions[::-1]
-    pos_out_map = {label: tuple(pos) for label, pos in zip(range(n_out), pos_out_positions_flipped)}
-    segments = []
-    colors = []
-    linewidths = []
-    contrib1 = np.abs(W1 * input_flat[np.newaxis, :])
-    flat1 = contrib1.flatten()
-    k1 = min(top_k_hidden, flat1.size)
-    top_idx1 = np.argsort(flat1)[::-1][:k1]
-    vals1 = flat1[top_idx1]
-    h_idx1, i_idx1 = np.unravel_index(top_idx1, contrib1.shape)
-    for h_i, i_i, val in zip(h_idx1, i_idx1, vals1):
-        segments.append([pos_in[i_i], pos_h[h_i]])
-        colors.append('k')
-        linewidths.append(1)
-    contrib2 = np.abs(W2 * h[np.newaxis, :])
-    top_hidden_n = 5
-    top_hidden_idx = np.argsort(h)[::-1][:top_hidden_n]
-    for rank, h_i in enumerate(top_hidden_idx):
-        num_links = top_hidden_n - rank
-        edge_strengths = contrib2[:, h_i]
-        out_idx = np.argsort(edge_strengths)[::-1][:num_links]
-        for o_i in out_idx:
-            segments.append([pos_h[h_i], pos_out_map[o_i]])
-            colors.append('k')
-            linewidths.append(1)
+    pos_out = layer_pos(n_out, xs[2])
+    # Lines from input to all hidden neurons
+    segments_in_h = []
+    colors_in_h = []
+    linewidths_in_h = []
+    h_min, h_max = np.min(h), np.max(h)
+    h_range = h_max - h_min + 1e-12
+    for h_i in range(n_hidden):
+        h_val = h[h_i]
+        # Normalize h for color and linewidth
+        norm_h = (h_val - h_min) / h_range
+        color = plt.cm.viridis(norm_h)
+        lw = 0.5 + 2.5 * norm_h
+        for i_i in range(n_input):
+            segments_in_h.append([pos_in[i_i], pos_h[h_i]])
+            colors_in_h.append(color)
+            linewidths_in_h.append(lw)
+    # Lines from all hidden to output neurons
+    segments_h_out = []
+    colors_h_out = []
+    linewidths_h_out = []
+    probs_min, probs_max = np.min(probs), np.max(probs)
+    probs_range = probs_max - probs_min + 1e-12
+    for h_i in range(n_hidden):
+        for o_i in range(n_out):
+            prob_val = probs[o_i]
+            norm_prob = (prob_val - probs_min) / probs_range
+            # Color: grayscale, darker for higher prob
+            color = (1.0 - norm_prob, 1.0 - norm_prob, 1.0 - norm_prob, 1.0)
+            lw = 0.5 + 2.5 * norm_prob
+            segments_h_out.append([pos_h[h_i], pos_out[o_i]])
+            colors_h_out.append(color)
+            linewidths_h_out.append(lw)
     from matplotlib.collections import LineCollection
-    lc = LineCollection(segments, colors=colors, linewidths=linewidths, alpha=0.8)
-    lc.set_clip_on(True)
-    ax_center.add_collection(lc)
+    lc_in_h = LineCollection(segments_in_h, colors=colors_in_h, linewidths=linewidths_in_h, alpha=0.7)
+    lc_h_out = LineCollection(segments_h_out, colors=colors_h_out, linewidths=linewidths_h_out, alpha=0.7)
+    ax_center.add_collection(lc_in_h)
+    ax_center.add_collection(lc_h_out)
+    # Draw nodes
     pix_norm = (input_flat - input_flat.min()) / (input_flat.max() - input_flat.min() + 1e-12)
     ax_center.scatter(pos_in[:,0], pos_in[:,1], s=8, c=pix_norm, cmap='gray', edgecolors='none')
     h_act = np.maximum(0, h)
@@ -91,7 +98,6 @@ def display_line_connections(fig, gs, model, img_raw, h, probs, top_k_hidden):
     ax_center.scatter(pos_h[:,0], pos_h[:,1], s=40, c=h_norm, cmap='viridis', edgecolors='k')
     out_probs = probs
     out_norm = (out_probs - out_probs.min()) / (out_probs.max() - out_probs.min() + 1e-12)
-    pos_out_arr = np.vstack([pos_out_map[i] for i in range(n_out)])
     base_size = 2
     max_scale = 220
     sizes = base_size + (out_probs * (max_scale - base_size))
@@ -100,12 +106,12 @@ def display_line_connections(fig, gs, model, img_raw, h, probs, top_k_hidden):
     pred = int(np.argmax(probs))
     sizes[pred] = sizes[pred] * 1.6
     edgecols[pred] = 'red'
-    ax_center.scatter(pos_out_arr[:,0], pos_out_arr[:,1], s=sizes, facecolors=facecolors, edgecolors=edgecols, linewidths=0.9)
+    ax_center.scatter(pos_out[:,0], pos_out[:,1], s=sizes, facecolors=facecolors, edgecolors=edgecols, linewidths=0.9)
     ax_center.set_xlim(-0.5, 2.5)
     ax_center.set_ylim(-1.1, 1.1)
-    ax_center.set_title(f'Top connections (K={top_k_hidden} per stage)')
+    ax_center.set_title('Input→Hidden (width/color∝h), Hidden→Output (width/color∝probs)')
     for oi in range(n_out):
-        x, y = pos_out_arr[oi]
+        x, y = pos_out[oi]
         prob = probs[oi]
         label_str = f'{oi}: {prob:.2f}'
         if oi == pred:
@@ -181,7 +187,7 @@ def main():
     #img_norm, _ = test_norm[idx]
 
     model = get_model()
-    visualize_sample(model, device, img_raw, label, args.output, top_k_hidden=args.top_hidden)
+    visualize_sample(model, device, img_raw, label, args.output, top_k_hidden=10)
 
 
 if __name__ == '__main__':
