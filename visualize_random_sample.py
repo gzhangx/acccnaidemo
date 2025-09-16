@@ -108,15 +108,16 @@ def display_line_connections(fig, gs, model, img_raw, h, probs, top_k_hidden):
             colors_h_out.append(color)
             linewidths_h_out.append(lw)
     from matplotlib.collections import LineCollection
-    lc_in_h = LineCollection(segments_in_h, colors=colors_in_h, linewidths=linewidths_in_h, alpha=0.7)
+    lc_in_h = LineCollection(segments_in_h, colors=colors_in_h, linewidths=linewidths_in_h, alpha=0.25)
     lc_h_out = LineCollection(segments_h_out, colors=colors_h_out, linewidths=linewidths_h_out, alpha=0.7)
     ax_center.add_collection(lc_in_h)
     ax_center.add_collection(lc_h_out)
     # Draw nodes
     pix_norm = (input_flat - input_flat.min()) / (input_flat.max() - input_flat.min() + 1e-12)
-    # Flatten pos_in for scatter
+    # Marker size proportional to pixel value (normalized)
+    marker_sizes = 20 #8 + 32 * pix_norm
     pos_in_flat = pos_in.reshape(-1, 2)
-    ax_center.scatter(pos_in_flat[:,0], pos_in_flat[:,1], s=8, c=pix_norm, cmap='gray', edgecolors='none')
+    ax_center.scatter(pos_in_flat[:,0], pos_in_flat[:,1], s=marker_sizes, c=pix_norm, cmap='gray', edgecolors='none')
     h_act = np.maximum(0, h)
     h_norm = (h_act - h_act.min()) / (h_act.max() - h_act.min() + 1e-12)
     ax_center.scatter(pos_h[:,0], pos_h[:,1], s=40, c=h_norm, cmap='viridis', edgecolors='k')
