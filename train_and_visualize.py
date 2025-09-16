@@ -287,7 +287,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--epochs', type=int, default=3)
     parser.add_argument('--batch-size', type=int, default=256)
-    parser.add_argument('--hidden-size', type=int, default=128)
+    parser.add_argument('--hidden-size', type=int, default=64)
     parser.add_argument('--output-dir', type=str, default='outputs')
     parser.add_argument('--quick', action='store_true', help='run quick mode (less data)')
     parser.add_argument('--input-graph', type=int, default=None, help='index of collected input to draw network graph for')
