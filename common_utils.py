@@ -1,5 +1,8 @@
 import torch.nn as nn
 import torch.nn.functional as F
+import os
+import torch
+from torchvision import transforms
 
 class SimpleMLP(nn.Module):
     def __init__(self, input_size=28*28, hidden_size=128, num_classes=10):
@@ -13,10 +16,7 @@ class SimpleMLP(nn.Module):
         out = self.fc2(h)
         return out, h
 
-import os
-import torch
-from torchvision import transforms
-from train_and_visualize import SimpleMLP
+
 
 def get_device():
     if torch.backends.mps.is_available():

@@ -18,10 +18,7 @@ import seaborn as sns
 
 import torch
 import torch.nn.functional as F
-from torchvision import datasets, transforms
-
-# Import model architecture from train script
-from train_and_visualize import SimpleMLP
+from torchvision import datasets
 
 
 def denormalize(tensor, mean=0.1307, std=0.3081):
