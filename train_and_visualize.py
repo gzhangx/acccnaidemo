@@ -167,8 +167,8 @@ def visualize_input_graph(model, input_img, input_activations, out_path, top_k_e
 
     # create a figure with two panels: left for original image, right for network graph
     fig = plt.figure(figsize=(14, 8))
-    ax_img = fig.add_axes([0.02, 0.05, 0.28, 0.9])  # left panel for image
-    ax = fig.add_axes([0.36, 0.05, 0.62, 0.9])      # right panel for graph
+    ax_img = fig.add_axes([0.02, 0.05, 0.18, 0.9])  # left panel for image (made smaller)
+    ax = fig.add_axes([0.22, 0.05, 0.76, 0.9])      # right panel for graph (expanded)
 
     segments = []
     colors = []
