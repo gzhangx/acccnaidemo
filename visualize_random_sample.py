@@ -140,6 +140,16 @@ def visualize_sample(model, device, img_raw, img_norm, label, out_path, top_k_hi
     ax_center.set_ylim(-1.1, 1.1)
     ax_center.set_title(f'Top connections (K={top_k_hidden} per stage)')
 
+    # label each output node with class id and probability
+    for oi in range(n_out):
+        x, y = pos_out[oi]
+        prob = probs[oi]
+        label_str = f'{oi}: {prob:.2f}'
+        if oi == pred:
+            ax_center.text(x + 0.12, y, label_str, fontsize=8, color='red', fontweight='bold', va='center')
+        else:
+            ax_center.text(x + 0.12, y, label_str, fontsize=7, color='black', va='center')
+
     # right: split into two rows: top small original image, bottom probabilities
     # make the top (image) smaller and the bottom (probs) compact
     gs_right = gs[0, 2].subgridspec(2, 1, height_ratios=[0.35, 0.65], hspace=0.04)
