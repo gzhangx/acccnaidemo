@@ -76,7 +76,10 @@ def visualize_sample(model, device, img_raw, img_norm, label, out_path, top_k_hi
 
     pos_in = layer_pos(n_input, xs[0])
     pos_h = layer_pos(n_hidden, xs[1])
-    pos_out = layer_pos(n_out, xs[2])
+    pos_out_positions = layer_pos(n_out, xs[2])
+    # Order the output nodes by label (ascending) and map label -> position
+    label_order = sorted(list(range(n_out)))
+    pos_out_map = {label: tuple(pos) for label, pos in zip(label_order, pos_out_positions)}
 
     segments = []
     colors = []
@@ -107,7 +110,8 @@ def visualize_sample(model, device, img_raw, img_norm, label, out_path, top_k_hi
     vmax2 = vals2.max() if vals2.size > 0 else 1.0
     o_idx2, h_idx2 = np.unravel_index(top_idx2, absW2.shape)
     for o_i, h_i, val in zip(o_idx2, h_idx2, vals2):
-        segments.append([pos_h[h_i], pos_out[o_i]])
+        # map output index (class label) to its ordered position
+        segments.append([pos_h[h_i], pos_out_map[o_i]])
         colors.append('k')
         norm = (val - vmin2) / (vmax2 - vmin2 + 1e-12)
         linewidths.append(0.8 + 4.0 * norm)
@@ -134,7 +138,9 @@ def visualize_sample(model, device, img_raw, img_norm, label, out_path, top_k_hi
     edgecols = ['k'] * n_out
     sizes[pred] = 220
     edgecols[pred] = 'red'
-    ax_center.scatter(pos_out[:,0], pos_out[:,1], s=sizes, c=out_norm, cmap='plasma', edgecolors=edgecols)
+    # construct ordered array of output positions matching label order 0..n_out-1
+    pos_out_arr = np.vstack([pos_out_map[i] for i in range(n_out)])
+    ax_center.scatter(pos_out_arr[:,0], pos_out_arr[:,1], s=sizes, c=out_norm, cmap='plasma', edgecolors=edgecols)
 
     ax_center.set_xlim(-0.5, 2.5)
     ax_center.set_ylim(-1.1, 1.1)
@@ -142,7 +148,7 @@ def visualize_sample(model, device, img_raw, img_norm, label, out_path, top_k_hi
 
     # label each output node with class id and probability
     for oi in range(n_out):
-        x, y = pos_out[oi]
+        x, y = pos_out_arr[oi]
         prob = probs[oi]
         label_str = f'{oi}: {prob:.2f}'
         if oi == pred:
