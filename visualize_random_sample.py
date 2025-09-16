@@ -114,8 +114,8 @@ def display_line_connections(fig, gs, model, img_raw, h, probs, top_k_hidden):
     ax_center.add_collection(lc_h_out)
     # Draw nodes
     pix_norm = (input_flat - input_flat.min()) / (input_flat.max() - input_flat.min() + 1e-12)
-    # Marker size proportional to pixel value (normalized)
-    marker_sizes = 20 #8 + 32 * pix_norm
+    # Marker size: 40 if input_flat > input_thresh, else 8
+    marker_sizes = np.where(input_flat > input_thresh, 40, 8)
     pos_in_flat = pos_in.reshape(-1, 2)
     ax_center.scatter(pos_in_flat[:,0], pos_in_flat[:,1], s=marker_sizes, c=pix_norm, cmap='gray', edgecolors='none')
     h_act = np.maximum(0, h)
