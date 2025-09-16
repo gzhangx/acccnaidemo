@@ -67,7 +67,9 @@ def display_line_connections(fig, gs, model, img_raw, h, probs, top_k_hidden):
     h_min, h_max = np.min(h), np.max(h)
     h_range = h_max - h_min + 1e-12
     h_80 = np.percentile(h, 80)
-    input_50 = np.percentile(input_flat, 80)
+    input_80 = np.percentile(input_flat, 80)
+    min_pos = np.min(input_flat[input_flat > 0]) if np.any(input_flat > 0) else 0
+    input_thresh = max(input_80, min_pos)
     for h_i in range(n_hidden):
         h_val = h[h_i]
         # Only add if activation is above 80th percentile
@@ -78,7 +80,7 @@ def display_line_connections(fig, gs, model, img_raw, h, probs, top_k_hidden):
         color = (gray, gray, gray, 1.0)
         lw = 1 #0.5 + 2.5 * norm_h
         for i_i in range(n_input):
-            if input_flat[i_i] < input_50:
+            if input_flat[i_i] < input_thresh:
                 continue
             row = i_i // 28
             col = i_i % 28
@@ -92,6 +94,10 @@ def display_line_connections(fig, gs, model, img_raw, h, probs, top_k_hidden):
     probs_min, probs_max = np.min(probs), np.max(probs)
     probs_range = probs_max - probs_min + 1e-12
     for h_i in range(n_hidden):
+        h_val = h[h_i]
+        # Only add if activation is above 80th percentile
+        if h_val < h_80:
+            continue
         for o_i in range(n_out):
             prob_val = probs[o_i]
             norm_prob = (prob_val - probs_min) / probs_range
