@@ -52,7 +52,7 @@ def visualize_sample(model, device, img_raw, img_norm, label, out_path, top_k_hi
     fig = plt.figure(figsize=(14, 6))
     # make the side panels small and center wide; right column will be split vertically
     # increase horizontal spacing to avoid axes overlapping
-    gs = fig.add_gridspec(1, 3, width_ratios=[0.1, 5.0, 0.9], wspace=0.35)
+    gs = fig.add_gridspec(1, 3, width_ratios=[0.06, 6.5, 0.44], wspace=0.35)
 
     # center: connection graph showing top-K edges per stage (input->hidden, hidden->output)
     ax_center = fig.add_subplot(gs[0, 1])
@@ -141,7 +141,8 @@ def visualize_sample(model, device, img_raw, img_norm, label, out_path, top_k_hi
     ax_center.set_title(f'Top connections (K={top_k_hidden} per stage)')
 
     # right: split into two rows: top small original image, bottom probabilities
-    gs_right = gs[0, 2].subgridspec(2, 1, height_ratios=[0.5, 1.5], hspace=0.08)
+    # make the top (image) smaller and the bottom (probs) compact
+    gs_right = gs[0, 2].subgridspec(2, 1, height_ratios=[0.35, 0.65], hspace=0.04)
     ax_img = fig.add_subplot(gs_right[0, 0])
     ax_out = fig.add_subplot(gs_right[1, 0])
     # show original image above probs
@@ -153,9 +154,11 @@ def visualize_sample(model, device, img_raw, img_norm, label, out_path, top_k_hi
     bars = ax_out.bar(classes, probs, color='gray')
     bars[pred].set_color('red')
     ax_out.set_xticks(classes)
-    ax_out.set_xlabel('Class')
-    ax_out.set_ylabel('Probability')
-    ax_out.set_title(f'Probs\n(pred={pred})', fontsize=9)
+    ax_out.set_xlabel('Class', fontsize=7)
+    ax_out.set_ylabel('Probability', fontsize=7)
+    ax_out.tick_params(axis='x', labelsize=6)
+    ax_out.tick_params(axis='y', labelsize=6)
+    ax_out.set_title(f'Probs (pred={pred})', fontsize=8)
 
     plt.suptitle('Random MNIST sample visualization')
     # use manual subplots_adjust rather than tight_layout to avoid compatibility warnings
