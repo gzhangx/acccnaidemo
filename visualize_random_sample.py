@@ -36,6 +36,13 @@ def display_original_image(fig, gs_right, img_raw, label):
     ax_img.axis('off')
     return ax_img
 
+def createSqure(num_points=28):
+    x = np.linspace(-1, 1, num_points)
+    y = np.linspace(-1, 1, num_points)
+    xx, yy = np.meshgrid(x, y)
+    coords = np.stack([xx, yy], axis=-1)  # shape (28, 28, 2)
+    return coords
+
 def display_line_connections(fig, gs, model, img_raw, h, probs, top_k_hidden):
     ax_center = fig.add_subplot(gs[0, 1])
     ax_center.axis('off')
@@ -50,7 +57,7 @@ def display_line_connections(fig, gs, model, img_raw, h, probs, top_k_hidden):
         ys = np.linspace(-1, 1, n)
         xs_arr = np.full(n, x)
         return np.column_stack([xs_arr, ys])
-    pos_in = layer_pos(n_input, xs[0])
+    pos_in = createSqure()  # shape (28, 28, 2)
     pos_h = layer_pos(n_hidden, xs[1])
     pos_out = layer_pos(n_out, xs[2])
     # Lines from input to all hidden neurons
@@ -66,7 +73,9 @@ def display_line_connections(fig, gs, model, img_raw, h, probs, top_k_hidden):
         color = plt.cm.viridis(norm_h)
         lw = 0.5 + 2.5 * norm_h
         for i_i in range(n_input):
-            segments_in_h.append([pos_in[i_i], pos_h[h_i]])
+            row = i_i // 28
+            col = i_i % 28
+            segments_in_h.append([pos_in[row, col], pos_h[h_i]])
             colors_in_h.append(color)
             linewidths_in_h.append(lw)
     # Lines from all hidden to output neurons
@@ -92,7 +101,9 @@ def display_line_connections(fig, gs, model, img_raw, h, probs, top_k_hidden):
     ax_center.add_collection(lc_h_out)
     # Draw nodes
     pix_norm = (input_flat - input_flat.min()) / (input_flat.max() - input_flat.min() + 1e-12)
-    ax_center.scatter(pos_in[:,0], pos_in[:,1], s=8, c=pix_norm, cmap='gray', edgecolors='none')
+    # Flatten pos_in for scatter
+    pos_in_flat = pos_in.reshape(-1, 2)
+    ax_center.scatter(pos_in_flat[:,0], pos_in_flat[:,1], s=8, c=pix_norm, cmap='gray', edgecolors='none')
     h_act = np.maximum(0, h)
     h_norm = (h_act - h_act.min()) / (h_act.max() - h_act.min() + 1e-12)
     ax_center.scatter(pos_h[:,0], pos_h[:,1], s=40, c=h_norm, cmap='viridis', edgecolors='k')
