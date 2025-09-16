@@ -66,13 +66,20 @@ def display_line_connections(fig, gs, model, img_raw, h, probs, top_k_hidden):
     linewidths_in_h = []
     h_min, h_max = np.min(h), np.max(h)
     h_range = h_max - h_min + 1e-12
+    h_80 = np.percentile(h, 80)
+    input_50 = np.percentile(input_flat, 80)
     for h_i in range(n_hidden):
         h_val = h[h_i]
-        # Normalize h for color and linewidth
+        # Only add if activation is above 80th percentile
+        if h_val < h_80:
+            continue
         norm_h = (h_val - h_min) / h_range
-        color = plt.cm.viridis(norm_h)
-        lw = 0.5 + 2.5 * norm_h
+        gray = 1.0 - norm_h
+        color = (gray, gray, gray, 1.0)
+        lw = 1 #0.5 + 2.5 * norm_h
         for i_i in range(n_input):
+            if input_flat[i_i] < input_50:
+                continue
             row = i_i // 28
             col = i_i % 28
             segments_in_h.append([pos_in[row, col], pos_h[h_i]])
