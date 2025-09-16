@@ -12,27 +12,13 @@ from train_and_visualize import SimpleMLP
 import imageio
 
 def main():
-    if torch.backends.mps.is_available():
-        device = torch.device('mps')
-        print('Using device: mps (Apple Silicon GPU)')
-    elif torch.cuda.is_available():
-        device = torch.device('cuda')
-        print('Using device: cuda (NVIDIA GPU)')
-    else:
-        device = torch.device('cpu')
-        print('Using device: cpu')
-    print('Using device:', device)
-
-    raw_transform = transforms.ToTensor()
-    norm_transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
+    from common_utils import get_device, get_model, get_norm_transform, get_raw_transform
+    device = get_device()
+    raw_transform = get_raw_transform()
+    norm_transform = get_norm_transform()
     test_raw = datasets.MNIST('.', train=False, download=True, transform=raw_transform)
     test_norm = datasets.MNIST('.', train=False, download=True, transform=norm_transform)
-
-    # load model
-    model = SimpleMLP(hidden_size=64)
-    ckpt = torch.load('outputs/model.pth', map_location=device)
-    model.load_state_dict(ckpt.get('model_state', ckpt))
-    model.to(device)
+    model = get_model(hidden_size=64, device=device, checkpoint_path='outputs/model.pth')
 
     # for each label, choose a random index with that label
     labels_to_indices = {l: [] for l in range(10)}

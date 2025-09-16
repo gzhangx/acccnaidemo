@@ -200,19 +200,10 @@ def main():
     parser.add_argument('--output', type=str, default='outputs/random_sample.png')
     args = parser.parse_args()
 
-    if torch.backends.mps.is_available():
-        device = torch.device('mps')
-        print('Using device: mps (Apple Silicon GPU)')
-    elif torch.cuda.is_available():
-        device = torch.device('cuda')
-        print('Using device: cuda (NVIDIA GPU)')
-    else:
-        device = torch.device('cpu')
-        print('Using device: cpu')
-
-    # load datasets
-    raw_transform = transforms.ToTensor()
-    norm_transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
+    from common_utils import get_device, get_model, get_norm_transform, get_raw_transform
+    device = get_device()
+    raw_transform = get_raw_transform()
+    norm_transform = get_norm_transform()
     test_raw = datasets.MNIST('.', train=False, download=True, transform=raw_transform)
     test_norm = datasets.MNIST('.', train=False, download=True, transform=norm_transform)
 
@@ -227,16 +218,7 @@ def main():
     img_raw, label = test_raw[idx]
     img_norm, _ = test_norm[idx]
 
-    # load model
-    model = SimpleMLP(hidden_size=64)
-    if os.path.exists(args.checkpoint):
-        ckpt = torch.load(args.checkpoint, map_location=device)
-        model.load_state_dict(ckpt.get('model_state', ckpt))
-        print('Loaded checkpoint from', args.checkpoint)
-    else:
-        print(f'Checkpoint {args.checkpoint} not found. Using untrained model.')
-    model.to(device)
-
+    model = get_model(hidden_size=64, device=device, checkpoint_path=args.checkpoint)
     visualize_sample(model, device, img_raw.numpy(), img_norm, label, args.output, top_k_hidden=args.top_hidden)
 
 

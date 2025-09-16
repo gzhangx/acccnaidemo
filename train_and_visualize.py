@@ -297,20 +297,9 @@ def main():
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    if torch.backends.mps.is_available():
-        device = torch.device('mps')
-        print('Using device: mps (Apple Silicon GPU)')
-    elif torch.cuda.is_available():
-        device = torch.device('cuda')
-        print('Using device: cuda (NVIDIA GPU)')
-    else:
-        device = torch.device('cpu')
-        print('Using device: cpu')
-
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((0.1307,), (0.3081,)),
-    ])
+    from common_utils import get_device, get_norm_transform
+    device = get_device()
+    transform = get_norm_transform()
 
     train_dataset = datasets.MNIST('.', train=True, download=True, transform=transform)
     test_dataset = datasets.MNIST('.', train=False, download=True, transform=transform)
