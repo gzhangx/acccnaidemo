@@ -86,30 +86,32 @@ def visualize_sample(model, device, img_raw, img_norm, label, out_path, top_k_hi
     colors = []
     linewidths = []
 
-    # select global top-K input->hidden edges
-    absW1 = np.abs(W1)
-    flat1 = absW1.flatten()
+    # select global top-K input->hidden edges using per-sample contribution = |w * input_pixel|
+    # input_flat is in [0,1]
+    contrib1 = np.abs(W1 * input_flat[np.newaxis, :])
+    flat1 = contrib1.flatten()
     k1 = min(top_k_hidden, flat1.size)
     top_idx1 = np.argsort(flat1)[::-1][:k1]
     vals1 = flat1[top_idx1]
     vmin1 = vals1.min() if vals1.size > 0 else 0.0
     vmax1 = vals1.max() if vals1.size > 0 else 1.0
-    h_idx1, i_idx1 = np.unravel_index(top_idx1, absW1.shape)
+    h_idx1, i_idx1 = np.unravel_index(top_idx1, contrib1.shape)
     for h_i, i_i, val in zip(h_idx1, i_idx1, vals1):
         segments.append([pos_in[i_i], pos_h[h_i]])
         colors.append('k')
         norm = (val - vmin1) / (vmax1 - vmin1 + 1e-12)
         linewidths.append(0.8 + 4.0 * norm)
 
-    # select global top-K hidden->output edges
-    absW2 = np.abs(W2)
-    flat2 = absW2.flatten()
+    # select global top-K hidden->output edges using per-sample contribution = |w * hidden_activation|
+    # h contains the hidden activations for this sample
+    contrib2 = np.abs(W2 * h[np.newaxis, :])
+    flat2 = contrib2.flatten()
     k2 = min(top_k_hidden, flat2.size)
     top_idx2 = np.argsort(flat2)[::-1][:k2]
     vals2 = flat2[top_idx2]
     vmin2 = vals2.min() if vals2.size > 0 else 0.0
     vmax2 = vals2.max() if vals2.size > 0 else 1.0
-    o_idx2, h_idx2 = np.unravel_index(top_idx2, absW2.shape)
+    o_idx2, h_idx2 = np.unravel_index(top_idx2, contrib2.shape)
     for o_i, h_i, val in zip(o_idx2, h_idx2, vals2):
         # map output index (class label) to its ordered position
         segments.append([pos_h[h_i], pos_out_map[o_i]])
