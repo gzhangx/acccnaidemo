@@ -20,12 +20,17 @@ import torch
 import torch.nn.functional as F
 from torchvision import datasets
 
+from common_utils import get_normalize_transform
+
 
 def denormalize(tensor, mean=0.1307, std=0.3081):
     return tensor * std + mean
 
 
-def visualize_sample(model, device, img_raw, img_norm, label, out_path, top_k_hidden=9):
+def visualize_sample(model, device, img_raw_ten, label, out_path, top_k_hidden=9):
+    norm_tran = get_normalize_transform()
+    img_raw = img_raw_ten.numpy()
+    img_norm = norm_tran(img_raw_ten)
     # img_raw: (1,28,28) numpy or torch tensor in [0,1]
     # img_norm: normalized tensor for model input (1,1,28,28)
     model.eval()
@@ -197,12 +202,12 @@ def main():
     parser.add_argument('--output', type=str, default='outputs/random_sample.png')
     args = parser.parse_args()
 
-    from common_utils import get_device, get_model, get_norm_transform, get_raw_transform
+    from common_utils import get_device, get_model, get_raw_transform
     device = get_device()
     raw_transform = get_raw_transform()
-    norm_transform = get_norm_transform()
+    #norm_transform = get_norm_transform()
     test_raw = datasets.MNIST('.', train=False, download=True, transform=raw_transform)
-    test_norm = datasets.MNIST('.', train=False, download=True, transform=norm_transform)
+    #test_norm = datasets.MNIST('.', train=False, download=True, transform=norm_transform)
 
     if args.seed is not None:
         random.seed(args.seed)
@@ -213,10 +218,10 @@ def main():
         idx = args.index
 
     img_raw, label = test_raw[idx]
-    img_norm, _ = test_norm[idx]
+    #img_norm, _ = test_norm[idx]
 
-    model = get_model(hidden_size=64, device=device, checkpoint_path=args.checkpoint)
-    visualize_sample(model, device, img_raw.numpy(), img_norm, label, args.output, top_k_hidden=args.top_hidden)
+    model = get_model()
+    visualize_sample(model, device, img_raw, label, args.output, top_k_hidden=args.top_hidden)
 
 
 if __name__ == '__main__':
