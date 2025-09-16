@@ -186,6 +186,7 @@ def main():
     img_raw, label = test_raw[idx]
     #img_norm, _ = test_norm[idx]
 
+    print("Using index", idx)
     model = get_model()
     visualize_sample(model, device, img_raw, label, args.output, top_k_hidden=10)
 
