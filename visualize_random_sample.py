@@ -142,11 +142,14 @@ def visualize_sample(model, device, img_raw, img_norm, label, out_path, top_k_hi
     max_scale = 220
     sizes = base_size + (out_probs * (max_scale - base_size))
     print('Output node sizes:', sizes, out_probs)
+    # compute facecolors from the colormap for filled markers
+    # use solid black facecolors for output nodes
+    facecolors = np.array([[0.0, 0.0, 0.0, 1.0]] * n_out)
     edgecols = ['k'] * n_out
-    # emphasize predicted class
+    # emphasize predicted class (bigger size and red edge)
     sizes[pred] = sizes[pred] * 1.6
     edgecols[pred] = 'red'
-    ax_center.scatter(pos_out_arr[:,0], pos_out_arr[:,1], s=sizes, c=out_norm, cmap='plasma', edgecolors=edgecols)
+    ax_center.scatter(pos_out_arr[:,0], pos_out_arr[:,1], s=sizes, facecolors=facecolors, edgecolors=edgecols, linewidths=0.9)
 
     ax_center.set_xlim(-0.5, 2.5)
     ax_center.set_ylim(-1.1, 1.1)
