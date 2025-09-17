@@ -108,12 +108,12 @@ def display_line_connections(fig, gs, model, img_raw, h, probs, top_k_hidden):
             colors_h_out.append(color)
             linewidths_h_out.append(lw)
     from matplotlib.collections import LineCollection
-    lc_in_h = LineCollection(segments_in_h, colors=colors_in_h, linewidths=linewidths_in_h, alpha=0.01)
-    lc_h_out = LineCollection(segments_h_out, colors=colors_h_out, linewidths=linewidths_h_out, alpha=0.7)
+    lc_in_h = LineCollection(segments_in_h, colors=colors_in_h, linewidths=linewidths_in_h, alpha=0.11)
+    lc_h_out = LineCollection(segments_h_out, colors=colors_h_out, linewidths=linewidths_h_out, alpha=0.2)
     ax_center.add_collection(lc_in_h)
     ax_center.add_collection(lc_h_out)
     # Draw nodes
-    pix_norm = (input_flat - input_flat.min()) / (input_flat.max() - input_flat.min() + 1e-12)
+    pix_norm = input_flat.max() - (input_flat - input_flat.min()) / (input_flat.max() - input_flat.min() + 1e-12)
     # Marker size: 40 if input_flat > input_thresh, else 8
     marker_sizes = np.where(input_flat > input_thresh, 40, 8)
     pos_in_flat = pos_in.reshape(-1, 2)
