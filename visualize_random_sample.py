@@ -82,7 +82,7 @@ def display_line_connections(fig, gs, model, img_raw, h, probs, top_k_hidden):
         for i_i in range(n_input):
             if input_flat[i_i] < input_thresh:
                 continue
-            row = i_i // 28
+            row = 27 -(i_i // 28)
             col = i_i % 28
             segments_in_h.append([pos_in[row, col], pos_h[h_i]])
             colors_in_h.append(color)
