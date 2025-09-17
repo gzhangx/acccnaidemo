@@ -8,7 +8,7 @@ import torch
 from torchvision import datasets, transforms
 
 from visualize_random_sample import visualize_sample
-from train_and_visualize import SimpleMLP
+from common_utils import SimpleMLP
 import imageio
 
 def main():
@@ -18,7 +18,7 @@ def main():
     norm_transform = get_norm_transform()
     test_raw = datasets.MNIST('.', train=False, download=True, transform=raw_transform)
     test_norm = datasets.MNIST('.', train=False, download=True, transform=norm_transform)
-    model = get_model(hidden_size=64, device=device, checkpoint_path='outputs/model.pth')
+    model = get_model()
 
     # for each label, choose a random index with that label
     labels_to_indices = {l: [] for l in range(10)}
@@ -34,7 +34,7 @@ def main():
         img_raw, _ = test_raw[idx]
         img_norm, _ = test_norm[idx]
         out_path = f'outputs/random_sample_{lbl}.png'
-        visualize_sample(model, device, img_raw.numpy(), img_norm, lbl, out_path, top_k_hidden=20)
+        visualize_sample(model, device, img_raw, lbl, out_path, top_k_hidden=20)
         print('Wrote', out_path)
         imgs.append(imageio.v2.imread(str(out_path)))
 
