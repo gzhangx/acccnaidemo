@@ -122,7 +122,13 @@ def display_line_connections(fig, gs, model, img_raw, h, probs, top_k_hidden):
     h_norm = (h_act - h_act.min()) / (h_act.max() - h_act.min() + 1e-12)
     ax_center.scatter(pos_h[:,0], pos_h[:,1], s=40, c=h_norm, cmap='viridis', edgecolors='k')
     out_probs = probs
-    out_norm = (out_probs - out_probs.min()) / (out_probs.max() - out_probs.min() + 1e-12)
+    
+    for i_i in range(n_input):
+        row = 27 -(i_i // 28)
+        col = i_i % 28
+        ax_center.text(pos_in[row,col][0], pos_in[row,col][1], str(round(input_flat[i_i],2)), fontsize=8, color='red', fontweight='bold', va='center')
+
+
     base_size = 2
     max_scale = 220
     sizes = base_size + (out_probs * (max_scale - base_size))
