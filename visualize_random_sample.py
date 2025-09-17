@@ -108,7 +108,7 @@ def display_line_connections(fig, gs, model, img_raw, h, probs, top_k_hidden):
             colors_h_out.append(color)
             linewidths_h_out.append(lw)
     from matplotlib.collections import LineCollection
-    lc_in_h = LineCollection(segments_in_h, colors=colors_in_h, linewidths=linewidths_in_h, alpha=0.25)
+    lc_in_h = LineCollection(segments_in_h, colors=colors_in_h, linewidths=linewidths_in_h, alpha=0.01)
     lc_h_out = LineCollection(segments_h_out, colors=colors_h_out, linewidths=linewidths_h_out, alpha=0.7)
     ax_center.add_collection(lc_in_h)
     ax_center.add_collection(lc_h_out)
@@ -117,7 +117,10 @@ def display_line_connections(fig, gs, model, img_raw, h, probs, top_k_hidden):
     # Marker size: 40 if input_flat > input_thresh, else 8
     marker_sizes = np.where(input_flat > input_thresh, 40, 8)
     pos_in_flat = pos_in.reshape(-1, 2)
-    ax_center.scatter(pos_in_flat[:,0], pos_in_flat[:,1], s=marker_sizes, c=pix_norm, cmap='gray', edgecolors='none')
+    # Create a copy of pos_in_flat and flip the y coordinate
+    pos_in_flat_flipy = pos_in_flat.copy()
+    pos_in_flat_flipy[:, 1] = -pos_in_flat_flipy[:, 1]
+    ax_center.scatter(pos_in_flat_flipy[:,0], pos_in_flat_flipy[:,1], s=marker_sizes, c=pix_norm, cmap='gray', edgecolors='none')
     h_act = np.maximum(0, h)
     h_norm = (h_act - h_act.min()) / (h_act.max() - h_act.min() + 1e-12)
     ax_center.scatter(pos_h[:,0], pos_h[:,1], s=40, c=h_norm, cmap='viridis', edgecolors='k')
