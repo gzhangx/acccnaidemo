@@ -129,7 +129,7 @@ def display_line_connections(fig, gs, model, img_raw, h, probs, top_k_hidden):
     for i_i in range(n_input):
         row = 27 -(i_i // 28)
         col = i_i % 28
-        ax_center.text(pos_in[row,col][0], pos_in[row,col][1], str(round(input_flat[i_i],2)), fontsize=8, color='red', fontweight='bold', va='center')
+        #ax_center.text(pos_in[row,col][0], pos_in[row,col][1], str(round(input_flat[i_i],2)), fontsize=8, color='red', fontweight='bold', va='center')
 
 
     base_size = 2
